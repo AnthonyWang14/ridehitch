@@ -9,8 +9,12 @@ class RideHitch:
     def __init__(self,filename=None):
         
         random.seed(1)
+        # self.T_threshold = 50
+        # self.D_threshold = 50
+
         self.T_threshold = 50
         self.D_threshold = 50
+
         self.map_size = 100
         self.request_num = 10000
         self.requests_list = []
@@ -33,7 +37,7 @@ class RideHitch:
         self.latest_request = None
         self.pool_size = 100
         self.state_num = 0
-        self.reset()
+        self.reset(reset_seq=True, filename=filename)
         pass
 
     # generate all requests
@@ -156,22 +160,22 @@ class RideHitch:
         return state
 
 
-    # check match
-    def check_match(self, supply, demand):
-        if supply[-1] < demand[-1]:
-            return False
-        if np.abs(supply[1]-demand[1]) > self.T_threshold:
-            return False
-        a = [supply[2], supply[3]]
-        b = [supply[4], supply[5]]
-        c = [demand[2], demand[3]]
-        d = [demand[4], demand[5]]
-        old_path = dist(a,b)
-        new_path = dist(a,c) + dist(c,d) + dist(d,b)
-        detour = new_path - old_path
-        if detour > self.D_threshold:
-            return False
-        return True
+    # # check match
+    # def check_match(self, supply, demand):
+    #     if supply[-1] < demand[-1]:
+    #         return False
+    #     if np.abs(supply[1]-demand[1]) > self.T_threshold:
+    #         return False
+    #     a = [supply[2], supply[3]]
+    #     b = [supply[4], supply[5]]
+    #     c = [demand[2], demand[3]]
+    #     d = [demand[4], demand[5]]
+    #     old_path = dist(a,b)
+    #     new_path = dist(a,c) + dist(c,d) + dist(d,b)
+    #     detour = new_path - old_path
+    #     if detour > self.D_threshold:
+    #         return False
+    #     return True
 
 
     # update environment
@@ -182,11 +186,11 @@ class RideHitch:
         if action >= len(self.supply_pool):
             reward = 0
         else:
-            if self.check_match(self.supply_pool[action], self.latest_request):
+            if check_match(self.supply_pool[action], self.latest_request, self.T_threshold, self.D_threshold):
                 self.supply_pool[action][-1] -= self.latest_request[-1]
                 reward = 1
             else:
-                reward = -1
+                reward = 0
         done = False
         while True:
             if self.time_stamp >= self.request_num:
@@ -207,29 +211,35 @@ class RideHitch:
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch()
-    with open("data/test10000.txt", "wt") as f:
-        for req in env.requests_list:
-            strarr = [str(item) for item in req]
-            print(" ".join(strarr), file=f)
+    env = RideHitch(filename="data/test10000.txt")
+    # with open("data/test.txt", "wt") as f:
+    #     for req in env.requests_list:
+    #         strarr = [str(item) for item in req]
+    #         print(" ".join(strarr), file=f)
     # pass 
     for eps in range(5):
-        s = env.reset(reset_seq = True, filename="data/test10000.txt")
+        s = env.reset(reset_seq = False)
         matched = 0
         # print(env.requests_list[0:10])
+        print("seq size:", env.request_num, "pool size:", env.pool_size)
         while True:
             action_for_choose = []
-            demand = env.latest_request  
-            s = env.encode_state()
-            for i in range(env.pool_size):
-                supply_chosen = [0,0,0,0,0,0,0]
-                for j in range(6):
-                    supply_chosen[1+j] = s[12*i+j]
-                if env.check_match(supply_chosen, demand):
-                    action_for_choose.append(i)
-            # for i in range(len(env.supply_pool)):
-            #     if env.check_match(env.supply_pool[i], demand):
+            demand = env.latest_request
+
+            # # use the state to get the matching candidate
+            # s = env.encode_state_3()
+            # for i in range(env.pool_size):
+            #     supply_chosen = [0,0,0,0,0,0,0]
+            #     # need to be changed if you choose different encoding method
+            #     for j in range(6):
+            #         supply_chosen[1+j] = s[6*i+j]
+            #     if check_match(supply_chosen, demand, env.T_threshold, env.D_threshold):
             #         action_for_choose.append(i)
+
+            # use the supply pool directly
+            for i in range(len(env.supply_pool)):
+                if check_match(env.supply_pool[i], demand, env.T_threshold, env.D_threshold):
+                    action_for_choose.append(i)
             if len(action_for_choose) > 0:
                 # print(len(action_for_choose))
                 action = random.choice(action_for_choose)
