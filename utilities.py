@@ -16,6 +16,16 @@ def check_match(supply, demand, T_threshold, D_threshold):
     if detour > D_threshold:
         return False
     return True
-    
+
 def dist(s, d):
     return np.abs(s[0]-d[0]) + np.abs(s[1]-d[1])
+
+
+def bounded_normal(loc, std_, low, high):
+	x = np.random.normal(loc,std_)
+	x = round(x)
+	if x < low:
+		x = low
+	if x > high-1:
+		x = high-1
+	return x

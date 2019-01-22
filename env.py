@@ -51,11 +51,17 @@ class RideHitch:
         self.requests_list = []
         for i in range(self.request_num):
             request_type = random.randint(0, 1)
-            t = random.randint(0,self.time_max)
-            s_x = random.randint(0,self.map_size)
-            s_y = random.randint(0,self.map_size)
-            d_x = random.randint(0,self.map_size)
-            d_y = random.randint(0,self.map_size)
+            # t = random.randint(0,self.time_max)
+            t = bounded_normal(1/2*self.time_max, 1/4*self.time_max, 0, self.time_max)
+            # s_x = random.randint(0,self.map_size)
+            # s_y = random.randint(0,self.map_size)
+            # d_x = random.randint(0,self.map_size)
+            # d_y = random.randint(0,self.map_size)
+            s_x = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
+            s_y = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
+            d_x = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
+            d_y = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
+
             if request_type == 0:
                 c = random.randint(self.supply_min, self.supply_max)
             else:
@@ -211,7 +217,7 @@ class RideHitch:
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch(filename="data/test10000.txt")
+    env = RideHitch()
     # with open("data/test.txt", "wt") as f:
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
