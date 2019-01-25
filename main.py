@@ -3,11 +3,12 @@ from DQN import DeepQNetwork
 from DuelingDQN import DuelingDQN
 
 def main():
-    env = RideHitch()
+    env = RideHitch("data/norm10000.txt")
+    print(env.requests_list)
     RL = DeepQNetwork(env.pool_size, env.state_num,
                         learning_rate=0.01,
                         reward_decay=0.95,
-                        e_greedy=0.9,
+                        e_greedy=1,
                         replace_target_iter=200,
                         memory_size=2000,
                         output_graph=False,

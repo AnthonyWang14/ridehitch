@@ -13,11 +13,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import gym
+from utilities import *
 
 # Hyper Parameters
 BATCH_SIZE = 32
 LR = 0.01                   # learning rate
-EPSILON = 0.9               # greedy policy
+EPSILON = 1               # greedy policy
 GAMMA = 0.9                 # reward discount
 TARGET_REPLACE_ITER = 100   # target update frequency
 MEMORY_CAPACITY = 2000
@@ -28,21 +29,27 @@ MEMORY_CAPACITY = 2000
 
 from env import RideHitch
 import random
-env = RideHitch(filename='data/test.txt')
+env = RideHitch(filename='data/norm10000.txt')
 N_ACTIONS = env.pool_size
 N_STATES = env.state_num
+T_threshold = env.T_threshold
+D_threshold = env.D_threshold
 # ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape     # to confirm the shape
 
 class Net(nn.Module):
     def __init__(self, ):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(N_STATES, 50)
+        self.fc1 = nn.Linear(N_STATES, 30)
         self.fc1.weight.data.normal_(0, 0.1)   # initialization
-        self.out = nn.Linear(50, N_ACTIONS)
+        self.fc2 = nn.Linear(30, 10)
+        self.fc2.weight.data.normal_(0, 0.1)
+        self.out = nn.Linear(10, N_ACTIONS)
         self.out.weight.data.normal_(0, 0.1)   # initialization
 
     def forward(self, x):
         x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
         x = F.relu(x)
         actions_value = self.out(x)
         return actions_value
@@ -51,6 +58,7 @@ class Net(nn.Module):
 class DQN(object):
     def __init__(self):
         self.eval_net, self.target_net = Net(), Net()
+        print(self.eval_net)
         self.learn_step_counter = 0                                     # for target updating
         self.memory_counter = 0                                         # for storing memory
         self.memory = np.zeros((MEMORY_CAPACITY, N_STATES * 2 + 2))     # initialize memory
@@ -62,9 +70,27 @@ class DQN(object):
         # input only one sample
         if np.random.uniform() < EPSILON:   # greedy
             actions_value = self.eval_net.forward(x)
-            action = torch.max(actions_value, 1)[1].data.numpy()
-            # action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)  # return the argmax index
-            action = action[0]
+            rule_actions_value = np.zeros(N_ACTIONS)
+            # print(len(rule_actions_value))
+
+            # need to be changed if you choose different encoding method, here use encode3
+            demand = [1,0,0,0,0,0,0]
+            for j in range(6):
+                demand[1+j] = x[0][6*N_ACTIONS+j]
+            # print(actions_value[0])
+            for i in range(N_ACTIONS):
+                supply_chosen = [0,0,0,0,0,0,0]
+                for j in range(6):
+                    supply_chosen[1+j] = x[0][6*i+j]
+                if check_match(supply_chosen, demand, T_threshold, D_threshold):
+                    rule_actions_value[i] = actions_value[0][i]
+                else:
+                    rule_actions_value[i] = -999999
+            # print(rule_actions_value)
+            action = np.argmax(rule_actions_value)
+            # action = torch.max(actions_value, 1)[1].data.numpy()
+            # # action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)  # return the argmax index
+            # action = action[0]
         else:   # random
             action = np.random.randint(0, N_ACTIONS)
             # action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)

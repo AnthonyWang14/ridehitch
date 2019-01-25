@@ -12,8 +12,8 @@ class RideHitch:
         # self.T_threshold = 50
         # self.D_threshold = 50
 
-        self.T_threshold = 50
-        self.D_threshold = 50
+        self.T_threshold = 20
+        self.D_threshold = 20
 
         self.map_size = 100
         self.request_num = 10000
@@ -217,8 +217,8 @@ class RideHitch:
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch()
-    # with open("data/test.txt", "wt") as f:
+    env = RideHitch("data/norm10000.txt")
+    # with open("data/norm10000.txt", "wt") as f:
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)
