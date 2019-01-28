@@ -36,6 +36,8 @@ T_threshold = env.T_threshold
 D_threshold = env.D_threshold
 # ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape     # to confirm the shape
 
+
+loss_record = []
 class Net(nn.Module):
     def __init__(self, ):
         super(Net, self).__init__()
@@ -43,15 +45,16 @@ class Net(nn.Module):
         self.fc1.weight.data.normal_(0, 0.1)   # initialization
         self.fc2 = nn.Linear(30, 10)
         self.fc2.weight.data.normal_(0, 0.1)
-        self.out = nn.Linear(10, N_ACTIONS)
-        self.out.weight.data.normal_(0, 0.1)   # initialization
+        self.fc3 = nn.Linear(10, N_ACTIONS)
+        self.fc3.weight.data.normal_(0, 0.1)   # initialization
 
     def forward(self, x):
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
         x = F.relu(x)
-        actions_value = self.out(x)
+        x = self.fc3(x)
+        actions_value = F.relu(x)
         return actions_value
 
 
@@ -125,12 +128,13 @@ class DQN(object):
         
         self.optimizer.zero_grad()
         loss.backward()
+        loss_record.append(loss.data.numpy())
         self.optimizer.step()
 
 dqn = DQN()
 
 print('\nCollecting experience...')
-for i_episode in range(400):
+for i_episode in range(100):
     s = env.reset(False)
     ep_r = 0
     matched = 0
@@ -153,5 +157,6 @@ for i_episode in range(400):
         s = s_
     print('Ep: ', i_episode,
           '| Ep_r: ', ep_r, '| Matched: ', matched)
+print(loss_record)
 
         

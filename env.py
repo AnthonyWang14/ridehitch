@@ -223,32 +223,23 @@ if __name__ == '__main__':
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)
     # pass 
-    for eps in range(5):
-        s = env.reset(reset_seq = False)
+    for eps in range(10):
+        s = env.reset(reset_seq=False)
         matched = 0
         # print(env.requests_list[0:10])
         print("seq size:", env.request_num, "pool size:", env.pool_size)
         while True:
             action_for_choose = []
             demand = env.latest_request
-
-            # # use the state to get the matching candidate
-            # s = env.encode_state_3()
-            # for i in range(env.pool_size):
-            #     supply_chosen = [0,0,0,0,0,0,0]
-            #     # need to be changed if you choose different encoding method
-            #     for j in range(6):
-            #         supply_chosen[1+j] = s[6*i+j]
-            #     if check_match(supply_chosen, demand, env.T_threshold, env.D_threshold):
-            #         action_for_choose.append(i)
-
             # use the supply pool directly
             for i in range(len(env.supply_pool)):
                 if check_match(env.supply_pool[i], demand, env.T_threshold, env.D_threshold):
                     action_for_choose.append(i)
             if len(action_for_choose) > 0:
-                # print(len(action_for_choose))
-                action = random.choice(action_for_choose)
+                # # random pick
+                # action = random.choice(action_for_choose)
+                # pick the earlier one
+                action = action_for_choose[0]
             else:
                 action = 0
             s_, reward, done = env.step(action)
