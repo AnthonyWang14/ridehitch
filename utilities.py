@@ -2,7 +2,7 @@ import numpy as np
 
 # check match
 def check_match(supply, demand, T_threshold, D_threshold):
-    if supply[-1] < demand[-1]:
+    if supply[6] < demand[6]:
         return False
     if np.abs(supply[1]-demand[1]) > T_threshold:
         return False

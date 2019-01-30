@@ -3,17 +3,18 @@ import pandas as pd
 import numpy as np
 from utilities import *
 import copy
+import math
 
 class RideHitch:
 
     def __init__(self,filename=None):
         
         random.seed(1)
-        # self.T_threshold = 50
-        # self.D_threshold = 50
+        self.T_threshold = 50
+        self.D_threshold = 50
 
-        self.T_threshold = 20
-        self.D_threshold = 20
+        # self.T_threshold = 20
+        # self.D_threshold = 20
 
         self.map_size = 100
         self.request_num = 10000
@@ -66,7 +67,7 @@ class RideHitch:
                 c = random.randint(self.supply_min, self.supply_max)
             else:
                 c = random.randint(self.demand_min, self.demand_max)
-            self.requests_list.append([request_type,t,s_x,s_y,d_x,d_y,c])
+            self.requests_list.append([request_type,t,s_x,s_y,d_x,d_y,c,i])
         pass
 
     def generate_request_data(self, filename):
@@ -193,7 +194,9 @@ class RideHitch:
             reward = 0
         else:
             if check_match(self.supply_pool[action], self.latest_request, self.T_threshold, self.D_threshold):
-                self.supply_pool[action][-1] -= self.latest_request[-1]
+                self.supply_pool[action][6] -= self.latest_request[6] # 
+                # self.supply_pool[action][6] -= 1
+                # self.supply_pool[action][6] -= 0
                 reward = 1
             else:
                 reward = 0
@@ -218,16 +221,21 @@ class RideHitch:
 if __name__ == '__main__':
     random.seed(1)
     env = RideHitch("data/norm10000.txt")
+
+    # env = RideHitch()
     # with open("data/norm10000.txt", "wt") as f:
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)
     # pass 
-    for eps in range(10):
+    for eps in range(1):
         s = env.reset(reset_seq=False)
         matched = 0
         # print(env.requests_list[0:10])
         print("seq size:", env.request_num, "pool size:", env.pool_size)
+
+        driver_dict = {}
+        deg_list = []
         while True:
             action_for_choose = []
             demand = env.latest_request
@@ -235,11 +243,18 @@ if __name__ == '__main__':
             for i in range(len(env.supply_pool)):
                 if check_match(env.supply_pool[i], demand, env.T_threshold, env.D_threshold):
                     action_for_choose.append(i)
+            deg_list.append(len(action_for_choose))
             if len(action_for_choose) > 0:
-                # # random pick
-                # action = random.choice(action_for_choose)
-                # pick the earlier one
-                action = action_for_choose[0]
+                # random pick
+                action = random.choice(action_for_choose)
+                # # pick the earlier one
+                # action = action_for_choose[0]
+                idx = env.supply_pool[action][-1] # index of the req in the req list
+                if idx in driver_dict:
+                    driver_dict[idx] += 1
+                    # print(idx, driver_dict[idx], env.supply_pool[action])
+                else:
+                    driver_dict[idx] = 1
             else:
                 action = 0
             s_, reward, done = env.step(action)
@@ -247,5 +262,6 @@ if __name__ == '__main__':
                 matched += 1
             if done:
                 break
-        print("eps", eps, "reward", matched)
+        # print(deg_list)
+        print("eps", eps, "reward", matched, 'size of hitch', len(driver_dict), 'avg deg', sum(deg_list)/len(deg_list))
 
