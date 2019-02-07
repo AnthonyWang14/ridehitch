@@ -2,18 +2,19 @@ from env import RideHitch
 from DQN import DeepQNetwork
 from DuelingDQN import DuelingDQN
 
+
 def main():
     env = RideHitch("data/norm10000.txt")
     print(env.requests_list)
     RL = DeepQNetwork(env.pool_size, env.state_num,
-                        learning_rate=0.01,
-                        reward_decay=0.95,
-                        e_greedy=1,
-                        replace_target_iter=200,
-                        memory_size=2000,
-                        output_graph=False,
-                        T=env.T_threshold,
-                        D=env.D_threshold)
+                      learning_rate=0.01,
+                      reward_decay=0.95,
+                      e_greedy=1,
+                      replace_target_iter=200,
+                      memory_size=2000,
+                      output_graph=False,
+                      T=env.T_threshold,
+                      D=env.D_threshold)
     step = 0
     matched_list = []
     for episode in range(300):
@@ -40,7 +41,7 @@ def main():
     # print(matched_list)
     RL.plot_cost()
 
+
 if __name__ == '__main__':
     main()
     print('Finished!')
-    

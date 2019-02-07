@@ -5,10 +5,13 @@ from utilities import *
 import copy
 import math
 
+
+
+
 class RideHitch:
 
-    def __init__(self,filename=None):
-        
+    def __init__(self, filename=None):
+
         random.seed(1)
         self.T_threshold = 50
         self.D_threshold = 50
@@ -19,7 +22,6 @@ class RideHitch:
         self.map_size = 100
         self.request_num = 10000
         self.requests_list = []
-
 
         # possible departure time window
         self.time_max = 144
@@ -36,14 +38,14 @@ class RideHitch:
         self.time_stamp = 0
         self.supply_pool = []
         self.latest_request = None
-        self.pool_size = 100
+        self.pool_size = 10000
         self.state_num = 0
         self.reset(reset_seq=True, filename=filename)
         pass
 
     # generate all requests
     # request_type: 0-supply, 1-demand
-    # t: departure time 
+    # t: departure time
     # s: start point
     # d: destination
     # c: capacity
@@ -53,21 +55,21 @@ class RideHitch:
         for i in range(self.request_num):
             request_type = random.randint(0, 1)
             # t = random.randint(0,self.time_max)
-            t = bounded_normal(1/2*self.time_max, 1/4*self.time_max, 0, self.time_max)
+            t = bounded_normal(1 / 2 * self.time_max, 1 / 4 * self.time_max, 0, self.time_max)
             # s_x = random.randint(0,self.map_size)
             # s_y = random.randint(0,self.map_size)
             # d_x = random.randint(0,self.map_size)
             # d_y = random.randint(0,self.map_size)
-            s_x = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
-            s_y = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
-            d_x = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
-            d_y = bounded_normal(1/2*self.map_size, 1/4*self.map_size, 0, self.map_size)
+            s_x = bounded_normal(1 / 2 * self.map_size, 1 / 4 * self.map_size, 0, self.map_size)
+            s_y = bounded_normal(1 / 2 * self.map_size, 1 / 4 * self.map_size, 0, self.map_size)
+            d_x = bounded_normal(1 / 2 * self.map_size, 1 / 4 * self.map_size, 0, self.map_size)
+            d_y = bounded_normal(1 / 2 * self.map_size, 1 / 4 * self.map_size, 0, self.map_size)
 
             if request_type == 0:
                 c = random.randint(self.supply_min, self.supply_max)
             else:
                 c = random.randint(self.demand_min, self.demand_max)
-            self.requests_list.append([request_type,t,s_x,s_y,d_x,d_y,c,i])
+            self.requests_list.append([request_type, t, s_x, s_y, d_x, d_y, c, i])
         pass
 
     def generate_request_data(self, filename):
@@ -81,7 +83,7 @@ class RideHitch:
         return
 
     # reset the environment
-    def reset(self, reset_seq = True, filename=None):
+    def reset(self, reset_seq=True, filename=None):
         if reset_seq:
             if filename:
                 self.generate_request_data(filename)
@@ -103,7 +105,6 @@ class RideHitch:
                 break
         return self.encode_state_3()
 
-
     # def decode_request(self, req):
     #     t = req[1]
     #     s_x = req[2][0]
@@ -114,58 +115,57 @@ class RideHitch:
     #     return t, s_x, s_y, d_x, d_y, c
 
     def encode_state(self):
-        self.state_num = self.pool_size*12+self.request_num
+        self.state_num = self.pool_size * 12 + self.request_num
         state = np.zeros(self.state_num)
         # encode supply and demand
         for i, supply in enumerate(self.supply_pool):
             for j in range(6):
-                state[12*i+j] = supply[1+j]
-                state[12*i+j+6] = self.latest_request[1+j]
+                state[12 * i + j] = supply[1 + j]
+                state[12 * i + j + 6] = self.latest_request[1 + j]
         # encode time stamp
-        state[self.pool_size*12+self.time_stamp-1] = 1
+        state[self.pool_size * 12 + self.time_stamp - 1] = 1
         return state
 
     # one_hot encoding for the map
     # 2*map_size*4*self.time_max+self.request_num (1 means the time_stamp) 2 means the supply and demand
     # one_hot encoding has no order, the action space need to reconsider
     def encode_state_2(self):
-        self.state_num = 2*self.map_size*4*self.time_max+self.request_num
+        self.state_num = 2 * self.map_size * 4 * self.time_max + self.request_num
         self.state = np.zeros(self.state_num)
 
         # encode supply
         for supply in self.supply_pool:
             t, s_x, s_y, d_x, d_y, c = self.decode_request(supply)
-            self.state[t*self.map_size*4+s_x] = c
-            self.state[t*self.map_size*4+self.map_size+s_y] = c
-            self.state[t*self.map_size*4+self.map_size*2+d_x] = c
-            self.state[t*self.map_size*4+self.map_size*3+d_y] = c
+            self.state[t * self.map_size * 4 + s_x] = c
+            self.state[t * self.map_size * 4 + self.map_size + s_y] = c
+            self.state[t * self.map_size * 4 + self.map_size * 2 + d_x] = c
+            self.state[t * self.map_size * 4 + self.map_size * 3 + d_y] = c
 
         # encode demand
         t, s_x, s_y, d_x, d_y, c = self.decode_request(self.latest_request)
-        self.state[(t+self.time_max)*self.map_size*4+s_x] = c
-        self.state[(t+self.time_max)*self.map_size*4+self.map_size+s_y] = c
-        self.state[(t+self.time_max)*self.map_size*4+self.map_size*2+d_x] = c
-        self.state[(t+self.time_max)*self.map_size*4+self.map_size*3+d_y] = c
+        self.state[(t + self.time_max) * self.map_size * 4 + s_x] = c
+        self.state[(t + self.time_max) * self.map_size * 4 + self.map_size + s_y] = c
+        self.state[(t + self.time_max) * self.map_size * 4 + self.map_size * 2 + d_x] = c
+        self.state[(t + self.time_max) * self.map_size * 4 + self.map_size * 3 + d_y] = c
         # encode time_stamp
 
-        self.state[2*self.map_size*4*self.time_max+self.time_stamp] = 1
+        self.state[2 * self.map_size * 4 * self.time_max + self.time_stamp] = 1
         return self.state
-    
+
     # decode one_hot state
     def decode_state_2(self):
         self.supply_pool_no_order = []
 
     def encode_state_3(self):
-        self.state_num = 6*(self.pool_size+1) + 1
+        self.state_num = 6 * (self.pool_size + 1) + 1
         state = np.zeros(self.state_num)
         for i, supply in enumerate(self.supply_pool):
             for j in range(6):
-                state[6*i+j] = supply[1+j]
+                state[6 * i + j] = supply[1 + j]
         for j in range(6):
-            state[6*self.pool_size+j] = self.latest_request[1+j]
+            state[6 * self.pool_size + j] = self.latest_request[1 + j]
         state[-1] = self.time_stamp
         return state
-
 
     # # check match
     # def check_match(self, supply, demand):
@@ -184,7 +184,6 @@ class RideHitch:
     #         return False
     #     return True
 
-
     # update environment
     # action format: the index of the chosen driver or -1 do nothing
     # return: states next, reward, if end
@@ -194,7 +193,7 @@ class RideHitch:
             reward = 0
         else:
             if check_match(self.supply_pool[action], self.latest_request, self.T_threshold, self.D_threshold):
-                self.supply_pool[action][6] -= self.latest_request[6] # 
+                self.supply_pool[action][cap_idx] -= self.latest_request[cap_idx]  #
                 # self.supply_pool[action][6] -= 1
                 # self.supply_pool[action][6] -= 0
                 reward = 1
@@ -207,7 +206,7 @@ class RideHitch:
                 break
             self.latest_request = copy.deepcopy(self.requests_list[self.time_stamp])
             self.time_stamp += 1
-            if self.latest_request[0] == 0:
+            if self.latest_request[type_idx] == 0:
                 if len(self.supply_pool) >= self.pool_size:
                     self.supply_pool.pop(0)
                 self.supply_pool.append(self.latest_request)
@@ -216,6 +215,19 @@ class RideHitch:
         # may need consider terminated state?
         s_next = self.encode_state_3()
         return s_next, reward, done
+
+
+def greedy(action_for_choose, method, supply_pool, demand):
+    if method == "FIRST":
+        action = action_for_choose[0]
+    if method == "RANDOM":
+        action = random.choice(action_for_choose)
+    # TODO: add other method
+    # if method == "MINCAP":
+    #
+    #     pass
+    return action
+
 
 # baseline: greedy algorithm
 if __name__ == '__main__':
@@ -227,7 +239,7 @@ if __name__ == '__main__':
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)
-    # pass 
+    # pass
     for eps in range(1):
         s = env.reset(reset_seq=False)
         matched = 0
@@ -245,11 +257,9 @@ if __name__ == '__main__':
                     action_for_choose.append(i)
             deg_list.append(len(action_for_choose))
             if len(action_for_choose) > 0:
-                # random pick
-                action = random.choice(action_for_choose)
-                # # pick the earlier one
-                # action = action_for_choose[0]
-                idx = env.supply_pool[action][-1] # index of the req in the req list
+                # action = greedy(action_for_choose, 'FIRST', env.supply_pool, demand)
+                action = action_for_choose[0]
+                idx = env.supply_pool[action][idx_request_idx]  # index of the req in the req list
                 if idx in driver_dict:
                     driver_dict[idx] += 1
                     # print(idx, driver_dict[idx], env.supply_pool[action])
@@ -263,5 +273,5 @@ if __name__ == '__main__':
             if done:
                 break
         # print(deg_list)
-        print("eps", eps, "reward", matched, 'size of hitch', len(driver_dict), 'avg deg', sum(deg_list)/len(deg_list))
-
+        print("eps", eps, "reward", matched, 'size of hitch', len(driver_dict), 'avg deg',
+              sum(deg_list) / len(deg_list))

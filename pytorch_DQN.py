@@ -11,42 +11,46 @@ numpy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import gym
+
 from utilities import *
+from env import RideHitch
+
 
 # Hyper Parameters
 BATCH_SIZE = 32
-LR = 0.01                   # learning rate
-EPSILON = 1               # greedy policy
-GAMMA = 0.9                 # reward discount
-TARGET_REPLACE_ITER = 100   # target update frequency
+LR = 0.01  # learning rate
+EPSILON = 1  # greedy policy
+GAMMA = 0.9  # reward discount
+TARGET_REPLACE_ITER = 100  # target update frequency
 MEMORY_CAPACITY = 2000
 # env = gym.make('CartPole-v0')
 # env = env.unwrapped
 # N_ACTIONS = env.action_space.n
 # N_STATES = env.observation_space.shape[0]
 
-from env import RideHitch
-import random
+
 env = RideHitch(filename='data/norm10000.txt')
 N_ACTIONS = env.pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
 D_threshold = env.D_threshold
-# ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape     # to confirm the shape
+# ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape
+# to confirm the shape
 
 
 loss_record = []
+
+
 class Net(nn.Module):
+
     def __init__(self, ):
         super(Net, self).__init__()
         self.fc1 = nn.Linear(N_STATES, 30)
-        self.fc1.weight.data.normal_(0, 0.1)   # initialization
+        self.fc1.weight.data.normal_(0, 0.1)  # initialization
         self.fc2 = nn.Linear(30, 10)
         self.fc2.weight.data.normal_(0, 0.1)
         self.fc3 = nn.Linear(10, N_ACTIONS)
-        self.fc3.weight.data.normal_(0, 0.1)   # initialization
+        self.fc3.weight.data.normal_(0, 0.1)  # initialization
 
     def forward(self, x):
         x = self.fc1(x)
@@ -62,29 +66,29 @@ class DQN(object):
     def __init__(self):
         self.eval_net, self.target_net = Net(), Net()
         print(self.eval_net)
-        self.learn_step_counter = 0                                     # for target updating
-        self.memory_counter = 0                                         # for storing memory
-        self.memory = np.zeros((MEMORY_CAPACITY, N_STATES * 2 + 2))     # initialize memory
+        self.learn_step_counter = 0  # for target updating
+        self.memory_counter = 0  # for storing memory
+        self.memory = np.zeros((MEMORY_CAPACITY, N_STATES * 2 + 2))  # initialize memory
         self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=LR)
         self.loss_func = nn.MSELoss()
 
     def choose_action(self, x):
         x = torch.unsqueeze(torch.FloatTensor(x), 0)
         # input only one sample
-        if np.random.uniform() < EPSILON:   # greedy
+        if np.random.uniform() < EPSILON:  # greedy
             actions_value = self.eval_net.forward(x)
             rule_actions_value = np.zeros(N_ACTIONS)
             # print(len(rule_actions_value))
 
             # need to be changed if you choose different encoding method, here use encode3
-            demand = [1,0,0,0,0,0,0]
+            demand = [1, 0, 0, 0, 0, 0, 0]
             for j in range(6):
-                demand[1+j] = x[0][6*N_ACTIONS+j]
+                demand[1 + j] = x[0][6 * N_ACTIONS + j]
             # print(actions_value[0])
             for i in range(N_ACTIONS):
-                supply_chosen = [0,0,0,0,0,0,0]
+                supply_chosen = [0, 0, 0, 0, 0, 0, 0]
                 for j in range(6):
-                    supply_chosen[1+j] = x[0][6*i+j]
+                    supply_chosen[1 + j] = x[0][6 * i + j]
                 if check_match(supply_chosen, demand, T_threshold, D_threshold):
                     rule_actions_value[i] = actions_value[0][i]
                 else:
@@ -94,7 +98,7 @@ class DQN(object):
             # action = torch.max(actions_value, 1)[1].data.numpy()
             # # action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)  # return the argmax index
             # action = action[0]
-        else:   # random
+        else:  # random
             action = np.random.randint(0, N_ACTIONS)
             # action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         return action
@@ -116,20 +120,21 @@ class DQN(object):
         sample_index = np.random.choice(MEMORY_CAPACITY, BATCH_SIZE)
         b_memory = self.memory[sample_index, :]
         b_s = torch.FloatTensor(b_memory[:, :N_STATES])
-        b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES+1].astype(int))
-        b_r = torch.FloatTensor(b_memory[:, N_STATES+1:N_STATES+2])
+        b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int))
+        b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2])
         b_s_ = torch.FloatTensor(b_memory[:, -N_STATES:])
 
         # q_eval w.r.t the action in experience
         q_eval = self.eval_net(b_s).gather(1, b_a)  # shape (batch, 1)
-        q_next = self.target_net(b_s_).detach()     # detach from graph, don't backpropagate
-        q_target = b_r + GAMMA * q_next.max(1)[0].view(BATCH_SIZE, 1)   # shape (batch, 1)
+        q_next = self.target_net(b_s_).detach()  # detach from graph, don't backpropagate
+        q_target = b_r + GAMMA * q_next.max(1)[0].view(BATCH_SIZE, 1)  # shape (batch, 1)
         loss = self.loss_func(q_eval, q_target)
-        
+
         self.optimizer.zero_grad()
         loss.backward()
         loss_record.append(loss.data.numpy())
         self.optimizer.step()
+
 
 dqn = DQN()
 
@@ -151,12 +156,10 @@ for i_episode in range(100):
             # if done:
             #     print('Ep: ', i_episode,
             #           '| Ep_r: ', ep_r, '| Matched: ', matched)
-            
+
         if done:
             break
         s = s_
     print('Ep: ', i_episode,
           '| Ep_r: ', ep_r, '| Matched: ', matched)
 print(loss_record)
-
-        
