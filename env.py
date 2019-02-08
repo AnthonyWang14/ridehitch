@@ -6,8 +6,6 @@ import copy
 import math
 
 
-
-
 class RideHitch:
 
     def __init__(self, filename=None):
