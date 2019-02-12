@@ -4,11 +4,11 @@ from DuelingDQN import DuelingDQN
 
 
 def main():
-    env = RideHitch("data/norm10000.txt")
+    env = RideHitch("data/norm1000.txt")
     print(env.requests_list)
     RL = DeepQNetwork(env.pool_size, env.state_num,
                       learning_rate=0.01,
-                      reward_decay=0.95,
+                      reward_decay=0.99,
                       e_greedy=1,
                       replace_target_iter=200,
                       memory_size=2000,
@@ -17,7 +17,7 @@ def main():
                       D=env.D_threshold)
     step = 0
     matched_list = []
-    for episode in range(300):
+    for episode in range(100):
         # init
         observation = env.reset(reset_seq=False)
         # if episode % 100 == 0:

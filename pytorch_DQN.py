@@ -19,8 +19,8 @@ from env import RideHitch
 # Hyper Parameters
 BATCH_SIZE = 32
 LR = 0.01  # learning rate
-EPSILON = 1  # greedy policy
-GAMMA = 0.9  # reward discount
+EPSILON = 0.99  # greedy policy
+GAMMA = 1  # reward discount
 TARGET_REPLACE_ITER = 100  # target update frequency
 MEMORY_CAPACITY = 2000
 # env = gym.make('CartPole-v0')
@@ -29,7 +29,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='data/norm10000.txt')
+env = RideHitch(filename='data/norm1000.txt')
 N_ACTIONS = env.pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
@@ -45,11 +45,11 @@ class Net(nn.Module):
 
     def __init__(self, ):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(N_STATES, 30)
+        self.fc1 = nn.Linear(N_STATES, 300)
         self.fc1.weight.data.normal_(0, 0.1)  # initialization
-        self.fc2 = nn.Linear(30, 10)
+        self.fc2 = nn.Linear(300, 100)
         self.fc2.weight.data.normal_(0, 0.1)
-        self.fc3 = nn.Linear(10, N_ACTIONS)
+        self.fc3 = nn.Linear(100, N_ACTIONS)
         self.fc3.weight.data.normal_(0, 0.1)  # initialization
 
     def forward(self, x):

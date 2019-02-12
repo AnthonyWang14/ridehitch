@@ -18,7 +18,7 @@ class RideHitch:
         # self.D_threshold = 20
 
         self.map_size = 100
-        self.request_num = 10000
+        self.request_num = 1000
         self.requests_list = []
 
         # possible departure time window
@@ -36,7 +36,7 @@ class RideHitch:
         self.time_stamp = 0
         self.supply_pool = []
         self.latest_request = None
-        self.pool_size = 10000
+        self.pool_size = 100
         self.state_num = 0
         self.reset(reset_seq=True, filename=filename)
         pass
@@ -230,15 +230,15 @@ def greedy(action_for_choose, method, supply_pool, demand):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/norm10000.txt")
+    env = RideHitch("data/norm1000.txt")
 
     # env = RideHitch()
-    # with open("data/norm10000.txt", "wt") as f:
+    # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)
     # pass
-    for eps in range(1):
+    for eps in range(5):
         s = env.reset(reset_seq=False)
         matched = 0
         # print(env.requests_list[0:10])
@@ -255,8 +255,8 @@ if __name__ == '__main__':
                     action_for_choose.append(i)
             deg_list.append(len(action_for_choose))
             if len(action_for_choose) > 0:
-                # action = greedy(action_for_choose, 'FIRST', env.supply_pool, demand)
-                action = action_for_choose[0]
+                action = greedy(action_for_choose, 'FIRST', env.supply_pool, demand)
+                # action = action_for_choose[0]
                 idx = env.supply_pool[action][idx_request_idx]  # index of the req in the req list
                 if idx in driver_dict:
                     driver_dict[idx] += 1
