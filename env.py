@@ -162,7 +162,8 @@ class RideHitch:
                 state[6 * i + j] = supply[1 + j]
         for j in range(6):
             state[6 * self.pool_size + j] = self.latest_request[1 + j]
-        state[-1] = self.time_stamp
+        # forget the time stamp
+        state[-1] = 0
         return state
 
     # # check match

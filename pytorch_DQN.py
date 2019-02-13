@@ -18,7 +18,7 @@ from env import RideHitch
 
 # Hyper Parameters
 BATCH_SIZE = 32
-LR = 0.01  # learning rate
+LR = 0.1  # learning rate
 EPSILON = 0.99  # greedy policy
 GAMMA = 1  # reward discount
 TARGET_REPLACE_ITER = 100  # target update frequency
@@ -133,6 +133,7 @@ class DQN(object):
         self.optimizer.zero_grad()
         loss.backward()
         loss_record.append(loss.data.numpy())
+        print(loss.data.numpy())
         self.optimizer.step()
 
 

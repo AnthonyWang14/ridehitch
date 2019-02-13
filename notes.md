@@ -5,4 +5,4 @@
 
 ## what the graph looks like if follows the distribution
 
-
+## deal with the terminated state
