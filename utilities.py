@@ -29,6 +29,20 @@ def check_match(supply, demand, T_threshold, D_threshold):
         return False
     return True
 
+#check match only for space and time
+def check_match2(supply, demand, T_threshold, D_threshold):
+    if np.abs(supply[time_idx] - demand[time_idx]) > T_threshold:
+        return False
+    a = [supply[sx_idx], supply[sy_idx]]
+    b = [supply[dx_idx], supply[dy_idx]]
+    c = [demand[sy_idx], demand[sy_idx]]
+    d = [demand[dx_idx], demand[dy_idx]]
+    old_path = dist(a, b)
+    new_path = dist(a, c) + dist(c, d) + dist(d, b)
+    detour = new_path - old_path
+    if detour > D_threshold:
+        return False
+    return True
 
 def dist(s, d):
     return np.abs(s[0] - d[0]) + np.abs(s[1] - d[1])
