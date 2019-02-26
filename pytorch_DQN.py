@@ -29,7 +29,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='data/norm1000.txt')
+env = RideHitch(filename='data/taxi1000.txt')
 N_ACTIONS = env.pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
@@ -133,7 +133,7 @@ class DQN(object):
         self.optimizer.zero_grad()
         loss.backward()
         loss_record.append(loss.data.numpy())
-        print(loss.data.numpy())
+        # print(loss.data.numpy())
         self.optimizer.step()
 
 
@@ -163,4 +163,10 @@ for i_episode in range(100):
         s = s_
     print('Ep: ', i_episode,
           '| Ep_r: ', ep_r, '| Matched: ', matched)
-print(loss_record)
+
+
+import matplotlib.pyplot as plt
+plt.plot(np.arange(len(loss_record)), loss_record)
+plt.ylabel('Cost')
+plt.xlabel('training steps')
+plt.show()
