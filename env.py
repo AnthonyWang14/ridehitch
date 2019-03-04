@@ -12,7 +12,7 @@ class RideHitch:
 
         random.seed(1)
         self.T_threshold = 50
-        self.D_threshold = 60
+        self.D_threshold = 50
 
         # self.T_threshold = 20
         # self.D_threshold = 20
@@ -231,8 +231,7 @@ def greedy(action_for_choose, method, supply_pool, demand):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/taxi1000.txt")
-
+    env = RideHitch("data/norm10000.txt")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
@@ -256,7 +255,7 @@ if __name__ == '__main__':
                     action_for_choose.append(i)
             deg_list.append(len(action_for_choose))
             if len(action_for_choose) > 0:
-                action = greedy(action_for_choose, 'RANDOM', env.supply_pool, demand)
+                action = greedy(action_for_choose, 'FIRST', env.supply_pool, demand)
                 # action = action_for_choose[0]
                 idx = env.supply_pool[action][idx_request_idx]  # index of the req in the req list
                 if idx in driver_dict:
