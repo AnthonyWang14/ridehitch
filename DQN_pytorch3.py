@@ -11,13 +11,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utilities import *
-from env2 import RideHitch
+from env3 import RideHitch
 
 
 # Hyper Parameters
 BATCH_SIZE = 16
 LR = 0.01  # learning rate
-EPSILON = 0.99  # greedy policy
+EPSILON = 1  # greedy policy
 GAMMA = 1  # reward discount
 TARGET_REPLACE_ITER = 20  # target update frequency
 MEMORY_CAPACITY = 2000
@@ -27,8 +27,8 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='data/norm1000.txt')
-N_ACTIONS = env.pool_size
+env = RideHitch(filename='data/taxi1000.txt')
+N_ACTIONS = env.state_pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
 D_threshold = env.D_threshold
@@ -43,11 +43,10 @@ class Net(nn.Module):
 
     def __init__(self, ):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(N_STATES, 50)
+        self.fc1 = nn.Linear(N_STATES, 500)
         self.fc1.weight.data.normal_(0, 0.1)   # initialization
-        self.out = nn.Linear(50, N_ACTIONS)
+        self.out = nn.Linear(500, N_ACTIONS)
         self.out.weight.data.normal_(0, 0.1)   # initialization
-
 
     def forward(self, x):
         x = self.fc1(x)
@@ -69,22 +68,21 @@ class DQN(object):
     def choose_action(self, x):
         x = torch.unsqueeze(torch.FloatTensor(x), 0)
         # input only one sample
+        feasible_actions_num = 0
         if np.random.uniform() < EPSILON:  # greedy
             actions_value = self.eval_net.forward(x)
-            # rule_actions_value = np.zeros(N_ACTIONS)
-            #
-            # for i in range(N_ACTIONS):
-            #     if x[0][i] > 0:
-            #         rule_actions_value[i] = actions_value[0][i]
-            #     else:
-            #         rule_actions_value[i] = -999999
-            # # print(rule_actions_value)
-            # action = np.argmax(rule_actions_value)
-            action = torch.max(actions_value, 1)[1].data.numpy()
-            # # action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)  # return the argmax index
-            action = action[0]
+            rule_actions_value = np.zeros(N_ACTIONS)
+            for i in range(N_ACTIONS):
+                if x[0][i*6+cap_idx-1] > 0:
+                    rule_actions_value[i] = actions_value[0][i]
+                    feasible_actions_num += 1
+                else:
+                    rule_actions_value[i] = -999999
+            # print(feasible_actions_num)
+            action = np.argmax(rule_actions_value)
         else:  # random
             action = np.random.randint(0, N_ACTIONS)
+            feasible_actions_num = 999
             # action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         return action
 
@@ -131,6 +129,7 @@ for i_episode in range(30):
     matched = 0
     while True:
         a = dqn.choose_action(s)
+
         # take action
         s_, r, done = env.step(a)
         dqn.store_transition(s, a, r, s_)
@@ -149,7 +148,6 @@ for i_episode in range(30):
     print('Ep: ', i_episode,
           '| Ep_r: ', ep_r, '| Matched: ', matched)
 print(dqn)
-
 
 import matplotlib.pyplot as plt
 plt.plot(np.arange(len(loss_record)), loss_record)
