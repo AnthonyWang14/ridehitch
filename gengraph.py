@@ -1,12 +1,12 @@
 from utilities import *
 
-T_threshold = 50
-D_threshold = 50
+T_threshold = 60
+D_threshold = 70
 pool_size = 1000
 if __name__ == '__main__':
     adj_list = []
     requests_list = []
-    filename = 'data/norm1000.txt'
+    filename = 'data/taxi10000.txt'
     with open(filename, 'rt') as f:
         idx = 0
         supply_pool = []

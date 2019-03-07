@@ -1,5 +1,5 @@
 """
-This DQN-pytorch for env2 (encode the graph as state)
+This DQN-pytorch for env3 (encode the feasible driver as state)
 
 Dependencies:
 torch: 0.4
@@ -27,7 +27,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='data/taxi1000.txt')
+env = RideHitch(filename='data/taxi10000.txt')
 N_ACTIONS = env.state_pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold

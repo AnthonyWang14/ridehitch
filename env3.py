@@ -171,7 +171,7 @@ def greedy(action_for_choose, method, state_pool, state_rank_list):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/norm1000.txt")
+    env = RideHitch("data/taxi10000.txt")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
@@ -182,16 +182,13 @@ if __name__ == '__main__':
         matched = 0
         # print(env.requests_list[0:10])
         print("seq size:", env.request_num, "state pool size:", env.state_pool_size)
-
-        driver_dict = {}
-        deg_list = []
         while True:
             action_for_choose = []
             demand = env.latest_request
             # use the state pool
             action_for_choose = range(len(env.state_pool))
             if len(action_for_choose) > 0:
-                action = greedy(action_for_choose, 'RANK', env.state_pool, env.state_rank_list)
+                action = greedy(action_for_choose, 'FIRST', env.state_pool, env.state_rank_list)
                 # action = action_for_choose[0]
             else:
                 action = len(env.state_pool)
@@ -202,3 +199,4 @@ if __name__ == '__main__':
                 break
         # print(deg_list)
         print("eps", eps, "reward", matched)
+
