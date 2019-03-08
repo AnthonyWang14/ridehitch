@@ -36,7 +36,7 @@ class RideHitch:
         self.time_stamp = 0
         self.supply_pool = []
         self.latest_request = None
-        self.pool_size = 1000
+        self.pool_size = 100
         self.state_num = 0
         self.reset(reset_seq=True, filename=filename)
         pass

@@ -1,8 +1,10 @@
 """
-This DQN-pytorch for env3 (encode the feasible driver as state)
+View more, visit my tutorial page: https://morvanzhou.github.io/tutorials/
+My Youtube Channel: https://www.youtube.com/user/MorvanZhou
+More about Reinforcement learning: https://morvanzhou.github.io/tutorials/machine-learning/reinforcement-learning/
 
 Dependencies:
-torch: 0.4
+torch: 1.0.0
 gym: 0.8.1
 numpy
 """
@@ -11,15 +13,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utilities import *
-from env3 import RideHitch
+from env import RideHitch
 
 
 # Hyper Parameters
-BATCH_SIZE = 16
-LR = 0.01  # learning rate
-EPSILON = 1  # greedy policy
-GAMMA = 0.9  # reward discount
-TARGET_REPLACE_ITER = 20  # target update frequency
+BATCH_SIZE = 32
+LR = 0.1  # learning rate
+EPSILON = 0.99  # greedy policy
+GAMMA = 1  # reward discount
+TARGET_REPLACE_ITER = 100  # target update frequency
 MEMORY_CAPACITY = 2000
 # env = gym.make('CartPole-v0')
 # env = env.unwrapped
@@ -27,8 +29,8 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='taxi2k/0')
-N_ACTIONS = env.state_pool_size
+env = RideHitch(filename='data/norm1000.txt')
+N_ACTIONS = env.pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
 D_threshold = env.D_threshold
@@ -43,14 +45,14 @@ class Net(nn.Module):
 
     def __init__(self, ):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(N_STATES, 500)
-        self.fc1.weight.data.normal_(0, 0.1)   # initialization
-        self.out = nn.Linear(500, N_ACTIONS)
-        self.out.weight.data.normal_(0, 0.1)   # initialization
+        self.fc1 = nn.Linear(N_STATES, 1000)
+        self.fc1.weight.data.normal_(0, 0.1)  # initialization
+        self.fc2 = nn.Linear(1000, N_ACTIONS)
+        self.fc2.weight.data.normal_(0, 0.1)
 
     def forward(self, x):
         x = self.fc1(x)
-        x = self.out(x)
+        x = self.fc2(x)
         actions_value = F.relu(x)
         return actions_value
 
@@ -58,6 +60,10 @@ class Net(nn.Module):
 class DQN(object):
     def __init__(self):
         self.eval_net, self.target_net = Net(), Net()
+        # use cuda
+        self.eval_net.cuda()
+        self.target_net.cuda()
+
         print(self.eval_net)
         self.learn_step_counter = 0  # for target updating
         self.memory_counter = 0  # for storing memory
@@ -69,15 +75,29 @@ class DQN(object):
         x = torch.unsqueeze(torch.FloatTensor(x), 0)
         # input only one sample
         if np.random.uniform() < EPSILON:  # greedy
-            actions_value = self.eval_net.forward(x)
+            xcuda = x.cuda()
+            actions_value = self.eval_net.forward(xcuda)
             rule_actions_value = np.zeros(N_ACTIONS)
+            # print(len(rule_actions_value))
+
+            # need to be changed if you choose different encoding method, here use encode3
+            demand = [1, 0, 0, 0, 0, 0, 0]
+            for j in range(6):
+                demand[1 + j] = x[0][6 * N_ACTIONS + j]
+            # print(actions_value[0])
             for i in range(N_ACTIONS):
-                if x[0][i*6+cap_idx-1] > 0:
-                    rule_actions_value[i] = max(actions_value[0][i],0.001)
+                supply_chosen = [0, 0, 0, 0, 0, 0, 0]
+                for j in range(6):
+                    supply_chosen[1 + j] = x[0][6 * i + j]
+                if check_match(supply_chosen, demand, T_threshold, D_threshold):
+                    rule_actions_value[i] = max(actions_value[0][i], 0.01)
                 else:
                     rule_actions_value[i] = -1
-            # print(feasible_actions_num)
+            # print(rule_actions_value)
             action = np.argmax(rule_actions_value)
+            # action = torch.max(actions_value, 1)[1].data.numpy()
+            # # action = action[0] if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)  # return the argmax index
+            # action = action[0]
         else:  # random
             action = np.random.randint(0, N_ACTIONS)
             # action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
@@ -97,16 +117,18 @@ class DQN(object):
         self.learn_step_counter += 1
 
         ss = self.memory[:, :N_STATES]
-        mean = np.mean(ss, axis=0)
-        std = np.nanstd(ss, axis=0)+1e-3
+        # mean = np.mean(ss, axis=0)
+        # std = np.nanstd(ss, axis=0)+1e-6
+        mean = 0
+        std = 1
 
         # sample batch transitions
         sample_index = np.random.choice(MEMORY_CAPACITY, BATCH_SIZE)
         b_memory = self.memory[sample_index, :]
-        b_s = torch.FloatTensor((b_memory[:, :N_STATES]-mean)/std)
-        b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int))
-        b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2])
-        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:]-mean)/std)
+        b_s = torch.FloatTensor((b_memory[:, :N_STATES]-mean)/std).cuda()
+        b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int)).cuda()
+        b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2]).cuda()
+        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:]-mean)/std).cuda()
 
         # q_eval w.r.t the action in experience
         q_eval = self.eval_net(b_s).gather(1, b_a)  # shape (batch, 1)
@@ -116,22 +138,22 @@ class DQN(object):
 
         self.optimizer.zero_grad()
         loss.backward()
-        loss_record.append(loss)
+        loss_record.append(loss.data.cpu())
         # print(loss.data.numpy())
         self.optimizer.step()
 
 
-
+if torch.cuda.is_available():
+    print('use gpu')
 dqn = DQN()
 
 print('\nCollecting experience...')
-for i_episode in range(30):
+for i_episode in range(50):
     s = env.reset(False)
     ep_r = 0
     matched = 0
     while True:
         a = dqn.choose_action(s)
-
         # take action
         s_, r, done = env.step(a)
         dqn.store_transition(s, a, r, s_)
@@ -140,20 +162,18 @@ for i_episode in range(30):
             matched += 1
         if dqn.memory_counter > MEMORY_CAPACITY:
             dqn.learn()
-            # if done:
-            #     print('Ep: ', i_episode,
-            #           '| Ep_r: ', ep_r, '| Matched: ', matched)
+            if done:
+                print('Ep: ', i_episode, '| Ep_r: ', ep_r, '| Matched: ', matched)
 
         if done:
             break
         s = s_
-    print('Ep: ', i_episode,
-          '| Ep_r: ', ep_r, '| Matched: ', matched)
-print(dqn)
+    # print('Ep: ', i_episode,
+    #       '| Ep_r: ', ep_r, '| Matched: ', matched)
+
 
 import matplotlib.pyplot as plt
 plt.plot(np.arange(len(loss_record)), loss_record)
 plt.ylabel('Cost')
 plt.xlabel('training steps')
 plt.show()
-# print(loss_record)

@@ -171,7 +171,7 @@ def greedy(action_for_choose, method, state_pool, state_rank_list):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/taxi10000.txt")
+    env = RideHitch("taxi2k/0")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
