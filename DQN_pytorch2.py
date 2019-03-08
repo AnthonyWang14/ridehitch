@@ -51,8 +51,8 @@ class Net(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
-        x = F.relu(x)
-        actions_value = self.out(x)
+        x = self.out(x)
+        actions_value = F.relu(x)
         return actions_value
 
 
