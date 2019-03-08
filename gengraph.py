@@ -6,7 +6,7 @@ pool_size = 1000
 if __name__ == '__main__':
     adj_list = []
     requests_list = []
-    filename = 'data/taxi10000.txt'
+    filename = 'taxi2k/0'
     with open(filename, 'rt') as f:
         idx = 0
         supply_pool = []
@@ -27,7 +27,7 @@ if __name__ == '__main__':
             requests_list.append(d)
     request_num = len(requests_list)
     print(len(adj_list))
-    filename_adj = filename+'T'+str(T_threshold)+"D"+str(D_threshold)+"P"+str(pool_size)+".txt"
+    filename_adj = filename+'T'+str(T_threshold)+"D"+str(D_threshold)+"P"+str(pool_size)
     with open(filename_adj, 'w') as f:
         for i in range(len(adj_list)):
             str_arr = [str(item) for item in adj_list[i]]

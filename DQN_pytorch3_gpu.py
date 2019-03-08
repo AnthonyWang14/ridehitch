@@ -44,9 +44,10 @@ class Net(nn.Module):
     def __init__(self, ):
         super(Net, self).__init__()
         self.fc1 = nn.Linear(N_STATES, 500)
-        self.fc1.weight.data.normal_(0, 0.1)   # initialization
+        nn.init.xavier_normal_(self.fc1.weight)
         self.out = nn.Linear(500, N_ACTIONS)
-        self.out.weight.data.normal_(0, 0.1)   # initialization
+        nn.init.xavier_normal_(self.out.weight)
+        # self.out.weight.data.normal_(0, 0.1)   # initialization
 
     def forward(self, x):
         x = self.fc1(x)
@@ -54,10 +55,14 @@ class Net(nn.Module):
         actions_value = F.relu(x)
         return actions_value
 
-
 class DQN(object):
     def __init__(self):
         self.eval_net, self.target_net = Net(), Net()
+
+        # use cuda
+        self.eval_net.cuda()
+        self.target_net.cuda()
+
         print(self.eval_net)
         self.learn_step_counter = 0  # for target updating
         self.memory_counter = 0  # for storing memory
@@ -69,7 +74,8 @@ class DQN(object):
         x = torch.unsqueeze(torch.FloatTensor(x), 0)
         # input only one sample
         if np.random.uniform() < EPSILON:  # greedy
-            actions_value = self.eval_net.forward(x)
+            xcuda = x.cuda()
+            actions_value = self.eval_net.forward(xcuda)
             rule_actions_value = np.zeros(N_ACTIONS)
             for i in range(N_ACTIONS):
                 if x[0][i*6+cap_idx-1] > 0:
@@ -103,10 +109,10 @@ class DQN(object):
         # sample batch transitions
         sample_index = np.random.choice(MEMORY_CAPACITY, BATCH_SIZE)
         b_memory = self.memory[sample_index, :]
-        b_s = torch.FloatTensor((b_memory[:, :N_STATES]-mean)/std)
-        b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int))
-        b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2])
-        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:]-mean)/std)
+        b_s = torch.FloatTensor((b_memory[:, :N_STATES]-mean)/std).cuda()
+        b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int)).cuda()
+        b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2]).cuda()
+        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:]-mean)/std).cuda()
 
         # q_eval w.r.t the action in experience
         q_eval = self.eval_net(b_s).gather(1, b_a)  # shape (batch, 1)
@@ -116,7 +122,7 @@ class DQN(object):
 
         self.optimizer.zero_grad()
         loss.backward()
-        loss_record.append(loss)
+        loss_record.append(loss.data.cpu())
         # print(loss.data.numpy())
         self.optimizer.step()
 
