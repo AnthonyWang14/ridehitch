@@ -13,6 +13,12 @@ import torch.nn.functional as F
 from utilities import *
 from env_weighted import RideHitch
 import time
+import random
+import matplotlib.pyplot as plt
+
+SEED = 0
+torch.manual_seed(SEED)
+np.random.seed(SEED)
 
 # Hyper Parameters
 BATCH_SIZE = 16
@@ -27,7 +33,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='taxi2k/0')
+env = RideHitch(filename='taxi2k/1')
 N_ACTIONS = env.state_pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
@@ -43,15 +49,27 @@ class Net(nn.Module):
 
     def __init__(self, ):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(N_STATES, 500)
-        self.fc1.weight.data.normal_(0, 0.1)   # initialization
-        self.out = nn.Linear(500, N_ACTIONS)
-        self.out.weight.data.normal_(0, 0.1)   # initialization
+        self.fc1 = nn.Linear(N_STATES, 100)
+        nn.init.normal_(self.fc1.weight, 0, 0.1)
+        # self.fc1.weight.data.normal_(0, 0.1)   # initialization
+        self.fc2 = nn.Linear(100, 50)
+        nn.init.normal_(self.fc2.weight, 0, 0.1)
+        # self.fc2.weight.data.normal_(0, 0.1)
+        self.out = nn.Linear(50, N_ACTIONS)
+        nn.init.normal_(self.out.weight, 0, 0.1)
+        # self.out.weight.data.normal_(0, 0.1)   # initialization
 
     def forward(self, x):
+        s = x
         x = self.fc1(x)
+        x = self.fc2(x)
         x = self.out(x)
         actions_value = F.relu(x)
+        for i in range(N_ACTIONS):
+            if s[0][i * 6 + cap_idx - 1] > 0:
+                actions_value[0][i] = max(actions_value[0][i], 0.01)
+            else:
+                actions_value[0][i] = 0
         return actions_value
 
 
@@ -70,16 +88,26 @@ class DQN(object):
         # input only one sample
         if np.random.uniform() < EPSILON:  # greedy
             actions_value = self.eval_net.forward(x)
-            rule_actions_value = np.zeros(N_ACTIONS)
-            for i in range(N_ACTIONS):
-                if x[0][i*6+cap_idx-1] > 0:
-                    rule_actions_value[i] = max(actions_value[0][i],0.001)
-                else:
-                    rule_actions_value[i] = -1
-            # print(feasible_actions_num)
-            action = np.argmax(rule_actions_value)
+            # rule_actions_value = np.zeros(N_ACTIONS)
+            # for i in range(N_ACTIONS):
+            #     if x[0][i*6+cap_idx-1] > 0:
+            #         rule_actions_value[i] = max(actions_value[0][i],0.001)
+            #     else:
+            #         rule_actions_value[i] = -1
+            # # print(feasible_actions_num)
+            # action = np.argmax(rule_actions_value)
+            # no mask
+            action = torch.max(actions_value, 1)[1].data.numpy()[0]
+
         else:  # random
-            action = np.random.randint(0, N_ACTIONS)
+            possible_action = []
+            for i in range(N_ACTIONS):
+                if x[0][i * 6 + cap_idx - 1] > 0:
+                    possible_action.append(i)
+            if len(possible_action) > 0:
+                action = random.choice(possible_action)
+            else:
+                action = 0
             # action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         return action
 
@@ -98,15 +126,18 @@ class DQN(object):
 
         ss = self.memory[:, :N_STATES]
         mean = np.mean(ss, axis=0)
-        std = np.nanstd(ss, axis=0)+1e-3
-
+        std = np.std(ss, axis=0)
+        # print('mean', mean)
+        # print('std', std)
         # sample batch transitions
         sample_index = np.random.choice(MEMORY_CAPACITY, BATCH_SIZE)
         b_memory = self.memory[sample_index, :]
-        b_s = torch.FloatTensor((b_memory[:, :N_STATES]-mean)/std)
+        b_s = torch.FloatTensor((b_memory[:, :N_STATES] - mean) / std)
+        # print('non-normalization', b_memory[:, :N_STATES])
+        # print('after normalization', b_s)
         b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int))
         b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2])
-        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:]-mean)/std)
+        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:] - mean) / std)
 
         # q_eval w.r.t the action in experience
         q_eval = self.eval_net(b_s).gather(1, b_a)  # shape (batch, 1)
@@ -116,16 +147,14 @@ class DQN(object):
 
         self.optimizer.zero_grad()
         loss.backward()
-        loss_record.append(loss)
-        # print(loss.data.numpy())
+        loss_record.append(loss.data.numpy())
         self.optimizer.step()
-
 
 
 dqn = DQN()
 
 print('\nCollecting experience...')
-for i_episode in range(30):
+for i_episode in range(100):
     start_time = time.time()
     s = env.reset(False)
     ep_r = 0
@@ -149,11 +178,15 @@ for i_episode in range(30):
         if done:
             break
         s = s_
+    if len(loss_record) > 2000:
+        print('loss', np.mean(loss_record[-2000:]))
+        # avg_los = np.mean(loss_record[-2000:])
+    # for paras in dqn.eval_net.named_parameters():
+    #     print(paras)
     print('Ep: ', i_episode,
-          '| Ep_r: ', ep_r, '| Matched: ', matched, 'time', time.time()-start_time)
-print(dqn)
+          '| Ep_r: ', ep_r, '| Matched: ', matched, 'time', time.time() - start_time)
 
-import matplotlib.pyplot as plt
+
 plt.plot(np.arange(len(loss_record)), loss_record)
 plt.ylabel('Cost')
 plt.xlabel('training steps')

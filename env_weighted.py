@@ -39,7 +39,7 @@ class RideHitch:
         self.supply_pool = []
         self.latest_request = None
         self.state_num = 0
-        self.state_pool_size = 100
+        self.state_pool_size = 20
         self.state_pool = []
         self.reset(reset_seq=True, filename=filename)
         self.rank_list = []
@@ -75,8 +75,10 @@ class RideHitch:
         with open(filename, 'rt') as f:
             for line in f:
                 d = [int(i) for i in line.strip().split()]
-                self.requests_list.append(d)
+                if dist([d[sx_idx], d[sy_idx]], [d[dx_idx], d[dy_idx]]) > 5:
+                    self.requests_list.append(d)
         self.request_num = len(self.requests_list)
+        print(self.request_num)
         return
 
     # reset the environment
@@ -111,16 +113,17 @@ class RideHitch:
                 self.state_rank_list.append(self.rank_list[i])
                 if len(self.state_pool) > self.state_pool_size:
                     self.state_pool.pop(0)
+                    self.state_rank_list.pop(0)
 
-        self.state_num = 6 * (self.state_pool_size + 1) + 1
+        self.state_num = 6 * (self.state_pool_size + 1)
         state = np.zeros(self.state_num)
         for i, supply in enumerate(self.state_pool):
             for j in range(6):
                 state[6 * i + j] = supply[1 + j]
         for j in range(6):
             state[6 * self.state_pool_size + j] = self.latest_request[1 + j]
-        # forget the time stamp
-        state[-1] = 0
+        # # forget the time stamp
+        # state[-1] = 0
         return state
 
     # update environment
@@ -132,13 +135,18 @@ class RideHitch:
             reward = 0
         else:
             # print(len(self.supply_pool), self.supply_pool.index(self.state_pool[action]))
-            req = copy.deepcopy(self.latest_request)
-            reward = dist([req[sx_idx],req[sy_idx]], [req[dx_idx], req[dy_idx]])
+            sup = copy.deepcopy(self.state_pool[action])
+            dem = copy.deepcopy(self.latest_request)
+            dis1 = dist([sup[sx_idx], sup[sy_idx]], [dem[sx_idx], dem[sy_idx]])
+            dis2 = dist([dem[sx_idx], dem[sy_idx]], [dem[dx_idx], dem[dy_idx]])
+            dis3 = dist([dem[dx_idx], dem[dy_idx]], [sup[dx_idx], sup[dy_idx]])
+            reward = dis1+dis2+dis3
+            # if reward == 0:
+            #     print([req[sx_idx], req[sy_idx]], [req[dx_idx], req[dy_idx]])
             # reward = 1
             chosen_supply_idx = self.supply_pool.index(self.state_pool[action])
             self.supply_pool[chosen_supply_idx][cap_idx] -= self.latest_request[cap_idx]
         done = False
-
         while True:
             if self.time_stamp >= self.request_num:
                 done = True
@@ -173,7 +181,7 @@ def greedy(action_for_choose, method, state_pool, state_rank_list):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("taxi2k/0")
+    env = RideHitch("taxi2k/1")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
@@ -185,6 +193,7 @@ if __name__ == '__main__':
         total_reward = 0
         # print(env.requests_list[0:10])
         print("seq size:", env.request_num, "state pool size:", env.state_pool_size)
+        action_seq = []
         while True:
             action_for_choose = []
             demand = env.latest_request
@@ -195,12 +204,14 @@ if __name__ == '__main__':
                 # action = action_for_choose[0]
             else:
                 action = len(env.state_pool)
+            action_seq.append(action)
             s_, reward, done = env.step(action)
             if reward > 0:
                 total_reward += reward
                 matched += 1
             if done:
                 break
+        # print('action seq', action_seq)
         # print(deg_list)
         print("eps", eps, 'match', matched, "total_reward", total_reward)
 
