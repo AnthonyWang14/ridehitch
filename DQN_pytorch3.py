@@ -23,8 +23,8 @@ np.random.seed(SEED)
 # Hyper Parameters
 BATCH_SIZE = 16
 LR = 0.01  # learning rate
-EPSILON = 1  # greedy policy
-GAMMA = 0.9  # reward discount
+EPSILON = 0.9 # greedy policy
+GAMMA = 0.9 # reward discount
 TARGET_REPLACE_ITER = 20  # target update frequency
 MEMORY_CAPACITY = 2000
 # env = gym.make('CartPole-v0')
@@ -33,7 +33,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='taxi2k/1')
+env = RideHitch(filename='data/norm10000.txt')
 N_ACTIONS = env.state_pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
@@ -62,14 +62,14 @@ class Net(nn.Module):
     def forward(self, x):
         s = x
         x = self.fc1(x)
+        x = F.relu(x)
         x = self.fc2(x)
+        x = F.relu(x)
         x = self.out(x)
         actions_value = F.relu(x)
-        for i in range(N_ACTIONS):
-            if s[0][i * 6 + cap_idx - 1] > 0:
-                actions_value[0][i] = max(actions_value[0][i], 0.01)
-            else:
-                actions_value[0][i] = 0
+        # for i in range(N_ACTIONS):
+        #     if s[0][i * 6 + cap_idx - 1] <= 0:
+        #         actions_value[0][i] = 0
         return actions_value
 
 
@@ -84,10 +84,23 @@ class DQN(object):
         self.loss_func = nn.MSELoss()
 
     def choose_action(self, x):
-        x = torch.unsqueeze(torch.FloatTensor(x), 0)
+        if self.memory_counter > MEMORY_CAPACITY:
+            ss = self.memory[:, :N_STATES]
+            mean = np.mean(ss, axis=0)
+            std = np.std(ss, axis=0)
+        elif self.memory_counter > 0:
+            ss = self.memory[:self.memory_counter, :N_STATES]
+            mean = np.mean(ss, axis=0)
+            std = np.std(ss, axis=0) + 1e-5
+        else:
+            mean = x
+            std = 1
+        x = torch.unsqueeze(torch.FloatTensor((x-mean)/std), 0)
         # input only one sample
+
         if np.random.uniform() < EPSILON:  # greedy
-            actions_value = self.eval_net.forward(x)
+            actions_value = self.eval_net(x)
+            # print('forward', self.eval_net(x)==self.eval_net.forward(x))
             # rule_actions_value = np.zeros(N_ACTIONS)
             # for i in range(N_ACTIONS):
             #     if x[0][i*6+cap_idx-1] > 0:
@@ -100,14 +113,7 @@ class DQN(object):
             action = torch.max(actions_value, 1)[1].data.numpy()[0]
 
         else:  # random
-            possible_action = []
-            for i in range(N_ACTIONS):
-                if x[0][i * 6 + cap_idx - 1] > 0:
-                    possible_action.append(i)
-            if len(possible_action) > 0:
-                action = random.choice(possible_action)
-            else:
-                action = 0
+            action = np.random.randint(0, N_ACTIONS)
             # action = action if ENV_A_SHAPE == 0 else action.reshape(ENV_A_SHAPE)
         return action
 
@@ -123,7 +129,7 @@ class DQN(object):
         if self.learn_step_counter % TARGET_REPLACE_ITER == 0:
             self.target_net.load_state_dict(self.eval_net.state_dict())
         self.learn_step_counter += 1
-
+        #
         ss = self.memory[:, :N_STATES]
         mean = np.mean(ss, axis=0)
         std = np.std(ss, axis=0)
@@ -132,12 +138,12 @@ class DQN(object):
         # sample batch transitions
         sample_index = np.random.choice(MEMORY_CAPACITY, BATCH_SIZE)
         b_memory = self.memory[sample_index, :]
-        b_s = torch.FloatTensor((b_memory[:, :N_STATES] - mean) / std)
+        b_s = torch.FloatTensor((b_memory[:, :N_STATES]-mean)/std)
         # print('non-normalization', b_memory[:, :N_STATES])
         # print('after normalization', b_s)
         b_a = torch.LongTensor(b_memory[:, N_STATES:N_STATES + 1].astype(int))
         b_r = torch.FloatTensor(b_memory[:, N_STATES + 1:N_STATES + 2])
-        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:] - mean) / std)
+        b_s_ = torch.FloatTensor((b_memory[:, -N_STATES:]-mean)/std)
 
         # q_eval w.r.t the action in experience
         q_eval = self.eval_net(b_s).gather(1, b_a)  # shape (batch, 1)
@@ -150,20 +156,39 @@ class DQN(object):
         loss_record.append(loss.data.numpy())
         self.optimizer.step()
 
-
 dqn = DQN()
 
 print('\nCollecting experience...')
+S_CAP = 5000
+s_mem = np.zeros((S_CAP, N_STATES))
+s_count = 0
+
 for i_episode in range(100):
     start_time = time.time()
     s = env.reset(False)
     ep_r = 0
     matched = 0
     total_reward = 0
+    # s_index = s_count % S_CAP
+    # s_mem[s_index, :] = s
     while True:
+
+        # if s_count > S_CAP:
+        #     s_list = s_mem
+        #     mean = np.mean(s_list, axis=0)
+        #     std = np.std(s_list, axis=0)
+        # elif s_count > 1:
+        #     s_list = s_mem[:s_count, :]
+        #     mean = np.mean(s_list, axis=0)
+        #     std = np.std(s_list, axis=0) + 1e-5
+        # else:
+        #     mean = s
+        #     std = 1
+        # n_s = (s-mean)/std
         a = dqn.choose_action(s)
         # take action
         s_, r, done = env.step(a)
+        # n_s_ = (s_-mean)/std
         dqn.store_transition(s, a, r, s_)
         ep_r += r
         if r > 0:
@@ -178,6 +203,12 @@ for i_episode in range(100):
         if done:
             break
         s = s_
+        # s_count += 1
+        # s_index = s_count % S_CAP
+        # s_mem[s_index, :] = s
+
+    if s_count == 7000:
+        print('s_mem', s_mem)
     if len(loss_record) > 2000:
         print('loss', np.mean(loss_record[-2000:]))
         # avg_los = np.mean(loss_record[-2000:])
@@ -185,7 +216,6 @@ for i_episode in range(100):
     #     print(paras)
     print('Ep: ', i_episode,
           '| Ep_r: ', ep_r, '| Matched: ', matched, 'time', time.time() - start_time)
-
 
 plt.plot(np.arange(len(loss_record)), loss_record)
 plt.ylabel('Cost')

@@ -45,7 +45,7 @@ def check_match2(supply, demand, T_threshold, D_threshold):
     return True
 
 def dist(s, d):
-    return np.abs(s[0] - d[0]) + np.abs(s[1] - d[1])
+    return np.sqrt(np.square(s[0]-d[0]) + np.square(s[1]-d[1]))
 
 
 def bounded_normal(loc, std_, low, high):

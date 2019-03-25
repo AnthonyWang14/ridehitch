@@ -6,6 +6,8 @@ import numpy as np
 from utilities import *
 import copy
 import math
+SEED = 0
+np.random.seed(SEED)
 
 
 class RideHitch:
@@ -75,7 +77,7 @@ class RideHitch:
         with open(filename, 'rt') as f:
             for line in f:
                 d = [int(i) for i in line.strip().split()]
-                if dist([d[sx_idx], d[sy_idx]], [d[dx_idx], d[dy_idx]]) > 5:
+                if dist([d[sx_idx], d[sy_idx]], [d[dx_idx], d[dy_idx]]) > 2:
                     self.requests_list.append(d)
         self.request_num = len(self.requests_list)
         print(self.request_num)
@@ -140,7 +142,8 @@ class RideHitch:
             dis1 = dist([sup[sx_idx], sup[sy_idx]], [dem[sx_idx], dem[sy_idx]])
             dis2 = dist([dem[sx_idx], dem[sy_idx]], [dem[dx_idx], dem[dy_idx]])
             dis3 = dist([dem[dx_idx], dem[dy_idx]], [sup[dx_idx], sup[dy_idx]])
-            reward = dis1+dis2+dis3
+            dis4 = dist([sup[sx_idx], sup[sy_idx]], [sup[dx_idx], sup[dy_idx]])
+            reward = (dis1+dis2+dis3)/10
             # if reward == 0:
             #     print([req[sx_idx], req[sy_idx]], [req[dx_idx], req[dy_idx]])
             # reward = 1
@@ -181,7 +184,7 @@ def greedy(action_for_choose, method, state_pool, state_rank_list):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("taxi2k/1")
+    env = RideHitch("data/norm10000.txt")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:

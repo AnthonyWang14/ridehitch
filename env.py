@@ -11,8 +11,8 @@ class RideHitch:
     def __init__(self, filename=None):
 
         random.seed(1)
-        self.T_threshold = 50
-        self.D_threshold = 50
+        self.T_threshold = 60
+        self.D_threshold = 70
 
         # self.T_threshold = 20
         # self.D_threshold = 20
@@ -195,7 +195,15 @@ class RideHitch:
                 self.supply_pool[action][cap_idx] -= self.latest_request[cap_idx]  #
                 # self.supply_pool[action][6] -= 1
                 # self.supply_pool[action][6] -= 0
-                reward = 1
+                sup = copy.deepcopy(self.supply_pool[action])
+                dem = copy.deepcopy(self.latest_request)
+                dis1 = dist([sup[sx_idx], sup[sy_idx]], [dem[sx_idx], dem[sy_idx]])
+                dis2 = dist([dem[sx_idx], dem[sy_idx]], [dem[dx_idx], dem[dy_idx]])
+                dis3 = dist([dem[dx_idx], dem[dy_idx]], [sup[dx_idx], sup[dy_idx]])
+                dis4 = dist([sup[sx_idx], sup[sy_idx]], [sup[dx_idx], sup[dy_idx]])
+                if dis1++ dis2 + dis3 == dis4:
+                    print(sup, dem)
+                reward = dis1 / (dis1 + dis2 + dis3 - dis4)
             else:
                 reward = 0
         done = False
@@ -231,7 +239,7 @@ def greedy(action_for_choose, method, supply_pool, demand):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/norm1000.txt")
+    env = RideHitch("taxi2k/0")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
@@ -241,6 +249,7 @@ if __name__ == '__main__':
     for eps in range(10):
         s = env.reset(reset_seq=False)
         matched = 0
+        total_reward = 0
         # print(env.requests_list[0:10])
         print("seq size:", env.request_num, "pool size:", env.pool_size)
 
@@ -267,9 +276,9 @@ if __name__ == '__main__':
                 action = 0
             s_, reward, done = env.step(action)
             if reward > 0:
+                total_reward += reward
                 matched += 1
             if done:
                 break
         # print(deg_list)
-        print("eps", eps, "reward", matched, 'size of hitch', len(driver_dict), 'avg deg',
-              sum(deg_list) / len(deg_list))
+        print("eps", eps, "ep_r", total_reward, 'matched', matched)
