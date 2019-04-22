@@ -33,7 +33,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='data/norm10000.txt')
+env = RideHitch(filename='data/norm1000.txt')
 N_ACTIONS = env.state_pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
@@ -52,19 +52,18 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(N_STATES, 100)
         nn.init.normal_(self.fc1.weight, 0, 0.1)
         # self.fc1.weight.data.normal_(0, 0.1)   # initialization
-        self.fc2 = nn.Linear(100, 50)
-        nn.init.normal_(self.fc2.weight, 0, 0.1)
+        # self.fc2 = nn.Linear(100, 50)
+        # nn.init.normal_(self.fc2.weight, 0, 0.1)
         # self.fc2.weight.data.normal_(0, 0.1)
-        self.out = nn.Linear(50, N_ACTIONS)
+        self.out = nn.Linear(100, N_ACTIONS)
         nn.init.normal_(self.out.weight, 0, 0.1)
         # self.out.weight.data.normal_(0, 0.1)   # initialization
 
     def forward(self, x):
         s = x
         x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
+        # x = self.fc2(x)
+        # x = F.relu(x)
         x = self.out(x)
         actions_value = F.relu(x)
         # for i in range(N_ACTIONS):

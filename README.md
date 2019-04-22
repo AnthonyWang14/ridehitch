@@ -21,8 +21,15 @@ One type is the supply type from drivers and another is the demand from passenge
 |  TaxiT60D70P100  | FIRST | RANDOM | DQN | OPT  |
 |-------------------|-------|--------|-----|------|
 | R100   |     |     |     |     |
-| R1000  |  428  |    |     | 428 |
+| R1000  |  428  |  418  |     | 428 |
 | R10000 |   |   |     | |
+
+|  TaxiT60D70P1000  | FIRST | RANDOM | DQN | OPT  |
+|-------------------|-------|--------|-----|------|
+| R100   |     |     |     |     |
+| R1000  |  429  | 423 |     | 439 |
+| R10000 |   |   |     | |
+
 
 
 

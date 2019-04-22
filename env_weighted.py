@@ -15,8 +15,8 @@ class RideHitch:
     def __init__(self, filename=None):
 
         random.seed(1)
-        self.T_threshold = 60
-        self.D_threshold = 70
+        self.T_threshold = 50
+        self.D_threshold = 50
 
         # self.T_threshold = 20
         # self.D_threshold = 20
@@ -139,11 +139,7 @@ class RideHitch:
             # print(len(self.supply_pool), self.supply_pool.index(self.state_pool[action]))
             sup = copy.deepcopy(self.state_pool[action])
             dem = copy.deepcopy(self.latest_request)
-            dis1 = dist([sup[sx_idx], sup[sy_idx]], [dem[sx_idx], dem[sy_idx]])
-            dis2 = dist([dem[sx_idx], dem[sy_idx]], [dem[dx_idx], dem[dy_idx]])
-            dis3 = dist([dem[dx_idx], dem[dy_idx]], [sup[dx_idx], sup[dy_idx]])
-            dis4 = dist([sup[sx_idx], sup[sy_idx]], [sup[dx_idx], sup[dy_idx]])
-            reward = (dis1+dis2+dis3)/10
+            reward = weight(sup, dem)
             # if reward == 0:
             #     print([req[sx_idx], req[sy_idx]], [req[dx_idx], req[dy_idx]])
             # reward = 1
@@ -166,7 +162,7 @@ class RideHitch:
         return s_next, reward, done
 
 
-def greedy(action_for_choose, method, state_pool, state_rank_list):
+def greedy(action_for_choose, method, state_pool, state_rank_list, state_weight_list):
     if method == "FIRST":
         action = action_for_choose[0]
     if method == "RANDOM":
@@ -178,13 +174,15 @@ def greedy(action_for_choose, method, state_pool, state_rank_list):
     if method == "RANK":
         action = np.argmax(state_rank_list)
         # print(state_rank_list)
+    if method == "MAXWEIGHT":
+        action = np.argmax(state_weight_list)
     return action
 
 
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/norm10000.txt")
+    env = RideHitch("data/norm1000.txt")
     # env = RideHitch()
     # with open("data/norm1000.txt", "wt") as f:
     #     for req in env.requests_list:
@@ -202,8 +200,11 @@ if __name__ == '__main__':
             demand = env.latest_request
             # use the state pool
             action_for_choose = range(len(env.state_pool))
+            state_weight_list = []
+            for i in action_for_choose:
+                state_weight_list.append(weight(env.state_pool[i], demand))
             if len(action_for_choose) > 0:
-                action = greedy(action_for_choose, 'FIRST', env.state_pool, env.state_rank_list)
+                action = greedy(action_for_choose, 'MAXWEIGHT', env.state_pool, env.state_rank_list, state_weight_list)
                 # action = action_for_choose[0]
             else:
                 action = len(env.state_pool)

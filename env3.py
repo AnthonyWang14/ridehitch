@@ -13,14 +13,14 @@ class RideHitch:
     def __init__(self, filename=None):
 
         random.seed(1)
-        self.T_threshold = 60
-        self.D_threshold = 70
+        self.T_threshold = 50
+        self.D_threshold = 50
 
         # self.T_threshold = 20
         # self.D_threshold = 20
 
         self.map_size = 100
-        self.request_num = 1000
+        self.request_num = 2000
         self.requests_list = []
 
         # possible departure time window
@@ -39,7 +39,7 @@ class RideHitch:
         self.supply_pool = []
         self.latest_request = None
         self.state_num = 0
-        self.state_pool_size = 100
+        self.state_pool_size = 1000
         self.state_pool = []
         self.reset(reset_seq=True, filename=filename)
         self.rank_list = []
@@ -171,9 +171,9 @@ def greedy(action_for_choose, method, state_pool, state_rank_list):
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/taxi1000.txt")
+    env = RideHitch("data/norm2000.txt")
     # env = RideHitch()
-    # with open("data/norm1000.txt", "wt") as f:
+    # with open("data/norm2000.txt", "wt") as f:
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)

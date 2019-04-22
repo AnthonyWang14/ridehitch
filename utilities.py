@@ -47,6 +47,13 @@ def check_match2(supply, demand, T_threshold, D_threshold):
 def dist(s, d):
     return np.sqrt(np.square(s[0]-d[0]) + np.square(s[1]-d[1]))
 
+def weight(sup, dem):
+    dis1 = dist([sup[sx_idx], sup[sy_idx]], [dem[sx_idx], dem[sy_idx]])
+    dis2 = dist([dem[sx_idx], dem[sy_idx]], [dem[dx_idx], dem[dy_idx]])
+    dis3 = dist([dem[dx_idx], dem[dy_idx]], [sup[dx_idx], sup[dy_idx]])
+    dis4 = dist([sup[sx_idx], sup[sy_idx]], [sup[dx_idx], sup[dy_idx]])
+    weight = (dis1 + dis2 + dis3) / 10
+    return weight
 
 def bounded_normal(loc, std_, low, high):
     x = np.random.normal(loc, std_)
