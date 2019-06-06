@@ -28,10 +28,10 @@ class RideHitch:
         # possible departure time window
         self.time_max = 144
         # some capacity parameters
-        self.supply_min = 3
+        self.supply_min = 4
         self.supply_max = 6
         self.demand_min = 1
-        self.demand_max = 6
+        self.demand_max = 3
         # if filename == None:
         #     self.generate_request_random()
         # else:
@@ -182,9 +182,9 @@ def greedy(action_for_choose, method, state_pool, state_rank_list, state_weight_
 # baseline: greedy algorithm
 if __name__ == '__main__':
     random.seed(1)
-    env = RideHitch("data/norm1000.txt")
+    env = RideHitch("data/2000-1-3.txt")
     # env = RideHitch()
-    # with open("data/norm1000.txt", "wt") as f:
+    # with open("data/2000-1-3.txt", "wt") as f:
     #     for req in env.requests_list:
     #         strarr = [str(item) for item in req]
     #         print(" ".join(strarr), file=f)
@@ -218,4 +218,3 @@ if __name__ == '__main__':
         # print('action seq', action_seq)
         # print(deg_list)
         print("eps", eps, 'match', matched, "total_reward", total_reward)
-

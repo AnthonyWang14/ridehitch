@@ -33,7 +33,7 @@ MEMORY_CAPACITY = 2000
 # N_STATES = env.observation_space.shape[0]
 
 
-env = RideHitch(filename='data/norm1000.txt')
+env = RideHitch(filename="data/2000-1-3.txt")
 N_ACTIONS = env.state_pool_size
 N_STATES = env.state_num
 T_threshold = env.T_threshold
@@ -172,18 +172,6 @@ for i_episode in range(100):
     # s_mem[s_index, :] = s
     while True:
 
-        # if s_count > S_CAP:
-        #     s_list = s_mem
-        #     mean = np.mean(s_list, axis=0)
-        #     std = np.std(s_list, axis=0)
-        # elif s_count > 1:
-        #     s_list = s_mem[:s_count, :]
-        #     mean = np.mean(s_list, axis=0)
-        #     std = np.std(s_list, axis=0) + 1e-5
-        # else:
-        #     mean = s
-        #     std = 1
-        # n_s = (s-mean)/std
         a = dqn.choose_action(s)
         # take action
         s_, r, done = env.step(a)
