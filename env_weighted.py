@@ -22,7 +22,7 @@ class RideHitch:
         # self.D_threshold = 20
 
         self.map_size = 100
-        self.request_num = 1000
+        self.request_num = 2000
         self.requests_list = []
 
         # possible departure time window
@@ -58,7 +58,7 @@ class RideHitch:
     def generate_request_random(self):
         self.requests_list = []
         for i in range(self.request_num):
-            request_type = random.randint(0, 1)
+            request_type = random.choice([0,1,1,1,1])
             t = bounded_normal(1 / 2 * self.time_max, 1 / 4 * self.time_max, 0, self.time_max)
             s_x = bounded_normal(1 / 2 * self.map_size, 1 / 4 * self.map_size, 0, self.map_size)
             s_y = bounded_normal(1 / 2 * self.map_size, 1 / 4 * self.map_size, 0, self.map_size)
